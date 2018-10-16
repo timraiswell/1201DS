@@ -1,0 +1,238 @@
+---
+title: "Data Exploration With R"
+author: "Tim Raiswell"
+date: "10/15/2018"
+output: 
+  html_document:
+    fig_height: 8
+    fig_width: 10
+---
+
+```{r, setup, include=FALSE}
+require(mosaic)   # Load additional packages here 
+knitr::opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+```
+
+### Loading our Libraries  
+
+```{r, warning = FALSE}
+pacman::p_load(tidyverse, psych, mosaic, ggeffects)
+```
+
+### Importing the Data
+
+```{r, message = FALSE, warning = FALSE}
+facebook_data_raw <- read_csv2('https://bit.ly/2NB7vKp')
+```
+
+### Looking at the Shape of the Data
+
+```{r, warning = FALSE}
+glimpse(facebook_data_raw)
+```
+
+
+### Renaming the data
+
+```{r, warning = FALSE}
+facebook_new <- facebook_data_raw %>% 
+  rename(page_likes = `Page total likes`, # call the rename function
+         type = "Type",
+         cat = "Category",
+         month = `Post Month`,
+         day = `Post Weekday`,
+        hour = `Post Hour`,
+        paid = "Paid",
+        total_reach = `Lifetime Post Total Reach`,
+        impressions = `Lifetime Post Total Impressions`,
+        engaged_users = `Lifetime Engaged Users`,
+        consumers = `Lifetime Post Consumers`,
+        consumption = `Lifetime Post Consumptions`,
+        impression_by_like =  `Lifetime Post Impressions by people who have liked your Page`,
+        reach_liked = `Lifetime Post reach by people who like your Page`,
+        like_engage = `Lifetime People who have liked your Page and engaged with your post`,
+        interactions = `Total Interactions`)
+```
+
+### How did we do?
+
+```{r, warning = FALSE}
+glimpse(facebook_new)
+```
+
+
+### Let's convert the factor variables
+```{r, warning = FALSE}
+facebook_types <- facebook_new %>% 
+  mutate(type = as.factor(type),
+         cat = as.factor(cat), 
+         paid = as.factor(paid),
+         month = as.factor(month),
+         day = as.factor(day),
+         hour = as.factor(hour))
+
+```
+
+
+### Renaming ad types to something that is more intuitive
+```{r, warning = FALSE}
+facebook_comp <- facebook_types %>% 
+  mutate(cat = str_replace_all(cat, "1", "action"),
+         cat  = str_replace_all(cat, "2", "product"),
+         cat  = str_replace_all(cat, "3", "inspiration")) %>% 
+  mutate(cat = as.factor(cat)) %>% 
+  na.omit
+
+
+```
+
+
+### Check our work again
+```{r, warning = FALSE}
+glimpse(facebook_comp)
+```
+
+### Let's take a look at the shape of the numeric variables
+```{r, warning = FALSE}
+
+facebook_comp %>%
+  select(-type, -cat, -month, -day, -hour,  -paid) %>%
+  multi.hist(bcol = "seagreen")
+
+# go here for some great-looking colors. Find the ones you love and start to b uild your own visualization brand: http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf
+```
+
+### Let's take a look at inter-variable correlation  
+
+```{r, warning = FALSE}
+pairs.panels(facebook_comp)
+```
+
+
+
+### How many of each type of ad category are there?  
+
+```{r, warning = FALSE}
+
+ggplot(data = facebook_comp) +
+  geom_bar(mapping = aes(x = cat), fill = "dodgerblue")
+ 
+```
+
+### How many of each type of ad is there?  
+
+
+```{r, warning = FALSE}
+ggplot(data = facebook_comp) +
+  geom_bar(mapping = aes(x = type), fill = "seagreen")
+```
+
+### How do ad types relate to ad categories?  
+
+```{r, warning = FALSE}
+ggplot(data = facebook_comp, aes(x = cat, fill = type)) +
+  geom_bar()
+
+```
+
+### Which ad categories get the most total interactions?  
+
+```{r, warning = FALSE}
+
+ggplot(data = facebook_comp) +
+  geom_boxplot(
+    mapping = aes(x = reorder(cat, interactions, FUN = mean), y = interactions),
+    outlier.color = "dodgerblue",
+    fill = "slategray3",
+    color = "gray38"
+  ) +
+  scale_y_continuous(limits = c(0, 500))
+```
+
+### Which ad types get the most interactions?  
+
+```{r, warning = FALSE}
+
+ggplot(data = facebook_comp) +
+  geom_boxplot(mapping = aes(x = reorder(type, interactions, FUN = mean), y = interactions), outlier.color = "dodgerblue", fill = "slategray3", color = "gray38") +
+  scale_y_continuous(limits = c(0, 500))
+```
+
+### Does paying for an ad make a difference to interactions?  
+
+```{r, warning = FALSE}
+ggplot(data = facebook_comp) +
+  geom_boxplot(mapping = aes(x = reorder(paid, interactions, FUN = mean), y = interactions), outlier.color = "dodgerblue", fill = "slategray3", color = "gray38") +
+  scale_y_continuous(limits = c(0, 500))
+```
+
+### What if we make 'consumers' our target?  
+
+```{r, warning = FALSE}
+ggplot(data = facebook_comp) +
+  geom_boxplot(mapping = aes(x = reorder(cat, consumers, FUN = mean), y = consumers), outlier.color = "dodgerblue", fill = "slategray3", color = "gray38") +
+  scale_y_continuous(limits = c(0, 3000))
+
+```
+
+### Ad type versus consumers  
+
+```{r, warning = FALSE}
+
+ggplot(data = facebook_comp) +
+  geom_boxplot(mapping = aes(x = reorder(type, consumers, FUN = mean), y = consumers), outlier.color = "dodgerblue", fill = "slategray3", color = "gray38") +
+  scale_y_continuous(limits = c(0, 3000))
+```
+
+### Does paying for an ad make a difference to consumer numbers?  
+
+```{r, warning = FALSE}
+ggplot(data = facebook_comp) +
+  geom_boxplot(mapping = aes(x = reorder(paid, consumers, FUN = mean), y = engaged_users), outlier.color = "dodgerblue", fill = "slategray3", color = "gray38") +
+  scale_y_continuous(limits = c(0, 500))
+```
+
+### Which days get the most consumers?  
+
+```{r, warning = FALSE}
+ggplot(data = facebook_comp) +
+  geom_boxplot(mapping = aes(x = day, y = consumers), outlier.color = "dodgerblue", fill = "slategray3", color = "gray38") +
+  scale_y_continuous(limits = c(0, 500))
+```
+
+
+### Which months get the most consumers?  
+
+```{r, warning = FALSE}
+ggplot(data = facebook_comp) +
+  geom_boxplot(mapping = aes(x = month, y = consumers), outlier.color = "dodgerblue", fill = "slategray3", color = "gray38") +
+  scale_y_continuous(limits = c(0, 500))
+```
+
+### Which hours get the most consumers?  
+
+```{r, warning = FALSE}
+ggplot(data = facebook_comp) +
+  geom_boxplot(mapping = aes(x = hour, y = consumers), outlier.color = "dodgerblue", fill = "slategray3", color = "gray38") +
+  scale_y_continuous(limits = c(0, 500))
+```
+
+### Putting it together into a simple regression model  
+We will log-transform consumers in the model because it so right-skewed. We would not deploy this model as we have not robustly tested the linear model using cross-validation or test and training datasets. This regression is still very much in the camp of "exploratory data analysis".
+```{r, warning = FALSE, message = FALSE}
+facebook_lm <- lm(log(consumers) ~ cat + type + paid + month + day + hour, data = facebook_comp)
+summary(facebook_lm)
+```
+
+### What is the average effect of ad type on consumer numbers?  
+
+```{r, warning = FALSE, message  =FALSE}
+# for three variables, automatic facetting
+effects_plot <- ggpredict(facebook_lm, terms = "type")
+plot(effects_plot)
+
+
+```
+
